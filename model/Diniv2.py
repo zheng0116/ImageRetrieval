@@ -1,6 +1,7 @@
 from transformers import AutoImageProcessor, AutoModel
 import torch
 
+
 class ModelLoader:
     def __init__(self, model_size="base", model_path=None):
         self.model, self.processor = self.load_model(model_size, model_path)

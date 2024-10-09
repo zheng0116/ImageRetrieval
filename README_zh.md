@@ -54,8 +54,6 @@ sh run.sh start
 - `--database_folder`: 图像数据库文件夹的路径（默认：“./qurary”）
 
 
-```
-
 ## 项目结构
 
 - `main.py`：主应用程序文件，包含FastAPI服务器
@@ -65,7 +63,7 @@ sh run.sh start
 - `static/index.html`：图像检索逻辑
 
 
-## Requirements
+## 配置需要
 
 - Python 3.7+
 - FastAPI
@@ -79,7 +77,7 @@ sh run.sh start
 
 [MIT License](LICENSE)
 
-## Acknowledgements
+## 致谢
 
 - [DINOv2](https://github.com/facebookresearch/dinov2) by Facebook Research
 - [FastAPI](https://fastapi.tiangolo.com/)

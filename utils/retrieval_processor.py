@@ -8,6 +8,7 @@ import os
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class RetrievalProcessor:
     def __init__(self, model_loader, preprocessor, database_folder):
         self.model_loader = model_loader
@@ -17,11 +18,13 @@ class RetrievalProcessor:
         self.database_features, self.database_paths = self.load_or_extract_features()
 
     def glob_images(self):
-        image_paths = list(self.database_folder.glob("*.jpg")) + \
-                      list(self.database_folder.glob("*.jpeg")) + \
-                      list(self.database_folder.glob("*.png"))
+        image_paths = (
+            list(self.database_folder.glob("*.jpg"))
+            + list(self.database_folder.glob("*.jpeg"))
+            + list(self.database_folder.glob("*.png"))
+        )
         logger.info(f"Found {len(image_paths)} images in the database folder")
-        
+
         # Log all files in the database folder
         logger.info(f"Contents of {self.database_folder}:")
         for item in os.listdir(self.database_folder):
@@ -32,7 +35,7 @@ class RetrievalProcessor:
                     logger.info(f"    {subitem}")
             else:
                 logger.info(f"  File: {item}")
-        
+
         return image_paths
 
     def extract_features(self, img_paths):
@@ -56,31 +59,40 @@ class RetrievalProcessor:
             logger.info("Cache not found. Extracting features from images")
             img_paths = self.glob_images()
             if len(img_paths) == 0:
-                raise ValueError(f"No images found in the database folder: {self.database_folder}")
+                raise ValueError(
+                    f"No images found in the database folder: {self.database_folder}"
+                )
             features = self.extract_features(img_paths)
             paths = img_paths
             logger.info(f"Extracted features from {len(features)} images")
             with open(self.cache_path, "wb") as f:
                 pickle.dump((features, paths), f)
-        
+
         if len(features) == 0:
-            raise ValueError("No features extracted from the database. Please check the database folder and ensure it contains valid image files.")
-        
+            raise ValueError(
+                "No features extracted from the database. Please check the database folder and ensure it contains valid image files."
+            )
+
         return features, paths
 
     def calculate_similarity(self, query_feature):
         if self.database_features.shape[0] == 0:
-            raise ValueError("Database features are empty. Please check the database folder and feature extraction process.")
+            raise ValueError(
+                "Database features are empty. Please check the database folder and feature extraction process."
+            )
         return np.dot(self.database_features, query_feature)
 
     def retrieve(self, query_image):
         query_image = self.preprocessor.preprocess(query_image)
         query_feature = self.model_loader(query_image)
-        
+
         logger.info(f"Query feature shape: {query_feature.shape}")
         logger.info(f"Database features shape: {self.database_features.shape}")
-        
+
         similarities = self.calculate_similarity(query_feature)
         sorted_indices = np.argsort(similarities)[::-1]
-        
-        return [(str(self.database_paths[i]), float(similarities[i])) for i in sorted_indices]
+
+        return [
+            (str(self.database_paths[i]), float(similarities[i]))
+            for i in sorted_indices
+        ]
