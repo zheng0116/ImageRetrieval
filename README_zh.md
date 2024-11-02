@@ -30,6 +30,11 @@ cd ImageRetrieval
 ```bash
 sh run.sh install
 ```
+3. 下载DINOv2模型:
+```bash
+https://pan.baidu.com/s/1fBVgg_o8PTFEu_2vtLY25Q 
+提取码: f9ww 
+```
 
 ## 使用方法
 

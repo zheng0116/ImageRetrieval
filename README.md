@@ -30,7 +30,11 @@ cd ImageRetrieval
 ```bash
 sh run.sh install
 ```
-
+3. Download the Dinov2 weights
+```bash
+https://pan.baidu.com/s/1fBVgg_o8PTFEu_2vtLY25Q
+Extraction code: f9ww
+```
 ## Usage
 
 1. Prepare your image database by placing images in the `qurary` folder (or specify a custom folder).
