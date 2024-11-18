@@ -7,3 +7,4 @@ pyvenv.cfg
 **/Dinov2_model
 **/output/
 **/quary/
+**/tracing/

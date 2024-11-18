@@ -1,11 +1,10 @@
 # DINOv2 Image Retrieval System
  <strong>[中文](./README_zh.md) |
     English</strong>
-## Overview
+## 🌟 Introduction
 This project is an image retrieval system based on the DINOv2 model, allowing users to upload an image and retrieve similar images from a predefined image database.
-    
-## Features
 
+## 🚀 Features
 - Image feature extraction using the DINOv2 model
 - Support for different sizes of DINOv2 models (small, base, large, giant)
 - Image retrieval based on cosine similarity
