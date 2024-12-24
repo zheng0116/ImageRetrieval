@@ -79,11 +79,16 @@
 
 <body>
     <div class="container">
-        <h1>Image retrieval system based on DINOv2</h1>
+        <h1>Image retrieval system</h1>
 
         <div class="input-group">
             <input type="file" id="imageUpload" accept="image/*">
             <button id="retrieveButton">Start search</button>
+        </div>
+
+        <div class="input-group">
+            <input type="text" id="textSearch" placeholder="输入文本进行搜索..." style="flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px;">
+            <button id="textSearchButton">文本搜索</button>
         </div>
 
         <p id="statusMessage"></p>
@@ -139,6 +144,57 @@
                 }
             } catch (error) {
                 statusMessage.textContent = 'An error occurred during retrieval';
+                console.error('Error:', error);
+            }
+        });
+
+        const textSearch = document.getElementById('textSearch');
+        const textSearchButton = document.getElementById('textSearchButton');
+
+        textSearchButton.addEventListener('click', async function () {
+            if (!textSearch.value.trim()) {
+                statusMessage.textContent = '请输入搜索文本';
+                return;
+            }
+
+            statusMessage.textContent = '检索中...';
+            
+            try {
+                const response = await fetch('/text_retrieve', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: textSearch.value.trim()
+                    })
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    statusMessage.textContent = data.error;
+                } else {
+                    results.innerHTML = '';
+                    data.results.forEach(result => {
+                        const div = document.createElement('div');
+                        div.className = 'result-item';
+
+                        const img = document.createElement('img');
+                        img.src = result.url;
+                        img.alt = 'retrieve result';
+
+                        const similarity = document.createElement('span');
+                        similarity.className = 'similarity';
+                        similarity.textContent = `相似度: ${result.similarity.toFixed(4)}`;
+
+                        div.appendChild(img);
+                        div.appendChild(similarity);
+                        results.appendChild(div);
+                    });
+                    statusMessage.textContent = `找到 ${data.results.length} 张图片`;
+                }
+            } catch (error) {
+                statusMessage.textContent = '检索过程中发生错误';
                 console.error('Error:', error);
             }
         });

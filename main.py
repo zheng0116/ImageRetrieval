@@ -8,6 +8,8 @@ from pathlib import Path
 from model.Diniv2 import ModelLoader
 from utils.image_preprocessor import ImagePreprocessor
 from utils.retrieval_processor import RetrievalProcessor
+from model.clip_model import CLIPLoader
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -56,6 +58,20 @@ async def get_image(image_name: str):
     return FileResponse(image_path)
 
 
+@app.post("/text_retrieve")
+async def text_retrieve(text_query: dict):
+    try:
+        results = retriever.text_retrieve(text_query["text"])
+        return {
+            "results": [
+                {"url": f"/images/{Path(path).name}", "similarity": similarity}
+                for path, similarity in results
+            ]
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="DINOv2 Image Retrieval System")
     parser.add_argument(
@@ -89,7 +105,10 @@ def initialize_system(args):
     database_folder = args.database_folder
     model_loader = ModelLoader(model_size=args.model_size, model_path=args.model_path)
     preprocessor = ImagePreprocessor()
-    retriever = RetrievalProcessor(model_loader, preprocessor, database_folder)
+    clip_loader = CLIPLoader()
+    retriever = RetrievalProcessor(
+        model_loader, clip_loader, preprocessor, database_folder
+    )
 
 
 if __name__ == "__main__":
@@ -97,4 +116,4 @@ if __name__ == "__main__":
     initialize_system(args)
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=5999)

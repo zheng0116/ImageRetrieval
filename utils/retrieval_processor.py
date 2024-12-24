@@ -10,12 +10,15 @@ logger = logging.getLogger(__name__)
 
 
 class RetrievalProcessor:
-    def __init__(self, model_loader, preprocessor, database_folder):
+    def __init__(self, model_loader, clip_loader, preprocessor, database_folder):
         self.model_loader = model_loader
+        self.clip_loader = clip_loader
         self.preprocessor = preprocessor
         self.database_folder = Path(database_folder)
         self.cache_path = self.database_folder / "features_cache.pkl"
+        self.clip_cache_path = self.database_folder / "clip_features_cache.pkl"
         self.database_features, self.database_paths = self.load_or_extract_features()
+        self.clip_features = self.load_or_extract_clip_features()
 
     def glob_images(self):
         image_paths = (
@@ -90,6 +93,40 @@ class RetrievalProcessor:
         logger.info(f"Database features shape: {self.database_features.shape}")
 
         similarities = self.calculate_similarity(query_feature)
+        sorted_indices = np.argsort(similarities)[::-1]
+
+        return [
+            (str(self.database_paths[i]), float(similarities[i]))
+            for i in sorted_indices
+        ]
+
+    def load_or_extract_clip_features(self):
+        if self.clip_cache_path.exists():
+            logger.info("Loading CLIP features from cache")
+            with open(self.clip_cache_path, "rb") as f:
+                features = pickle.load(f)
+        else:
+            logger.info("Extracting CLIP features from images")
+            features = []
+            for img_path in tqdm(self.database_paths, desc="Extracting CLIP features"):
+                img = self.preprocessor.preprocess(img_path)
+                feature = self.clip_loader.extract_image_features(img)
+                features.append(feature)
+            features = np.array(features)
+            with open(self.clip_cache_path, "wb") as f:
+                pickle.dump(features, f)
+        return features
+
+    def text_retrieve(self, query_text):
+        query_feature = self.clip_loader.extract_text_features(query_text)
+
+        # 归一化特征
+        query_feature = query_feature / np.linalg.norm(query_feature)
+        normalized_features = (
+            self.clip_features / np.linalg.norm(self.clip_features, axis=1)[:, None]
+        )
+
+        similarities = np.dot(normalized_features, query_feature)
         sorted_indices = np.argsort(similarities)[::-1]
 
         return [
