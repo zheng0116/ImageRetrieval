@@ -20,14 +20,13 @@ class RetrievalProcessor:
         self.database_features, self.database_paths = self.load_or_extract_features()
         self.clip_features = self.load_or_extract_clip_features()
 
-    def glob_images(self):
-        image_paths = (
-            list(self.database_folder.glob("*.jpg"))
-            + list(self.database_folder.glob("*.jpeg"))
-            + list(self.database_folder.glob("*.png"))
-        )
-        logger.info(f"Found {len(image_paths)} images in the database folder")
-
+    def get_image_files(self):
+        support_formats = ("*.jpg", "*.jpeg", "*.png")
+        image_paths = [
+            path
+            for pattern in support_formats
+            for path in self.database_folder.glob(pattern)
+        ]
         # Log all files in the database folder
         logger.info(f"Contents of {self.database_folder}:")
         for item in os.listdir(self.database_folder):
@@ -60,7 +59,7 @@ class RetrievalProcessor:
             logger.info(f"Loaded {len(features)} features from cache")
         else:
             logger.info("Cache not found. Extracting features from images")
-            img_paths = self.glob_images()
+            img_paths = self.get_image_files()
             if len(img_paths) == 0:
                 raise ValueError(
                     f"No images found in the database folder: {self.database_folder}"
@@ -119,8 +118,6 @@ class RetrievalProcessor:
 
     def text_retrieve(self, query_text):
         query_feature = self.clip_loader.extract_text_features(query_text)
-
-        # 归一化特征
         query_feature = query_feature / np.linalg.norm(query_feature)
         normalized_features = (
             self.clip_features / np.linalg.norm(self.clip_features, axis=1)[:, None]
