@@ -1,4 +1,5 @@
 uvicorn
+python-dotenv
 python-multipart
 torch 
 transformers 

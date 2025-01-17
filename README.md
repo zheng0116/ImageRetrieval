@@ -14,7 +14,7 @@ This project is an image retrieval system based on DINOv2 and CLIP models, suppo
 
 ## User Interface
 
-![DINOv2 Image Retrieval System Interface](./images/image.png)
+![DINOv2 Image Retrieval System Interface](./images/web.png)
 
 ## Installation
 
@@ -37,9 +37,19 @@ https://pan.baidu.com/s/1fBVgg_o8PTFEu_2vtLY25Q
 Extraction code: f9ww
 ```
 
+4. Configure environment variables:
+Create a `.env` file in the root directory with the following content:
+```bash
+SERVER_URL="0.0.0.0"
+SERVER_PORT=5999
+MODEL_PATH="./Dinov2_model/dinov2-small"
+MODEL_SIZE="small"
+DATABASE_FOLDER="./quary"
+```
+
 ## Usage
 
-1. Prepare your image database by placing images in the `qurary` folder (or specify a custom folder).
+1. Prepare your image database by placing images in the `quary` folder (or specify a custom folder in .env).
 
 2. Run the application:
 
@@ -55,19 +65,21 @@ sh run.sh start
 
 ## Configuration
 
-You can configure the following parameters when running the application:
+You can configure the following parameters in your .env file:
 
-- `--model_path`: Path to the DINOv2 model (default: "./Dinov2_model/dinov2-small")
-- `--model_size`: Size of the DINOv2 model (choices: small, base, large, giant; default: small)
-- `--database_folder`: Path to the image database folder (default: "./qurary")
+- `SERVER_URL`: Server IP address (default: "0.0.0.0")
+- `SERVER_PORT`: Server port number (default: 5999)
+- `MODEL_PATH`: Path to the DINOv2 model (default: "./Dinov2_model/dinov2-small")
+- `MODEL_SIZE`: Size of the DINOv2 model (choices: small, base, large, giant; default: small)
+- `DATABASE_FOLDER`: Path to the image database folder (default: "./quary")
 
 ## Project Structure
 
 - `main.py`: Main application file with FastAPI server
-- `model/Diniv2.py`: DINOv2 model loader
-- `model/clip_model.py`: CLIP model loader
-- `utils/image_preprocessor.py`: Image preprocessing utilities
-- `utils/retrieval_processor.py`: Image retrieval logic
+- `retrieval/model/Diniv2.py`: DINOv2 model loader
+- `retrieval/model/clip_model.py`: CLIP model loader
+- `retrieval/services/utils/image_process.py`: Image preprocessing 
+- `retrieval/retrieval.py`: Image retrieval logic
 - `static/index.html`: Web interface
 
 ## Requirements

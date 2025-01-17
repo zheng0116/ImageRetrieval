@@ -1,202 +1,387 @@
 <!DOCTYPE html>
-<html lang="zh" style="font-family: Arial, sans-serif;">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image retrieval system based on DINOv2</title>
+    <title>Image Retrieval System</title>
     <style>
-        body {
-            background-color: #f3f4f6;
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        }
+
+        * {
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            padding-bottom: 2rem;
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 2rem 1rem;
         }
 
-        h1 {
-            color: #1f2937;
-            font-size: 24px;
-            margin-bottom: 20px;
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
         }
 
-        input[type="file"] {
-            width: calc(100% - 130px);
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text);
         }
 
-        button {
-            background-color: #3b82f6;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
+        .header p {
+            color: var(--text-secondary);
+        }
+
+        .search-card {
+            background: var(--card);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+            flex: 1;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            padding-right: 2.5rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1.25rem;
+            height: 1.25rem;
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        .upload-label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem;
+            background: white;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
             cursor: pointer;
-            margin-left: 10px;
+            transition: all 0.2s;
+            width: 42px;
+            height: 42px;
         }
 
-        button:hover {
-            background-color: #2563eb;
+        .upload-label:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .upload-label svg {
+            width: 1.25rem;
+            height: 1.25rem;
+            margin: 0;
+        }
+
+        #imageUpload {
+            display: none;
+        }
+
+        .progress {
+            height: 4px;
+            width: 100%;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+
+        .loading .progress {
+            display: block;
         }
 
         #statusMessage {
-            font-size: 14px;
-            color: #6b7280;
-            margin-top: 10px;
+            text-align: center;
+            color: var(--text-secondary);
+            margin: 1rem 0;
+            min-height: 1.5rem;
         }
 
-        #results {
+        .results-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 16px;
-            margin-top: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+            padding: 0.5rem;
         }
 
-        #results img {
+        .result-card {
+            background: var(--card);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s;
+        }
+
+        .result-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .result-image {
             width: 100%;
-            height: 150px;
+            height: 200px;
             object-fit: cover;
-            border-radius: 4px;
         }
 
-        .input-group {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
+        .result-similarity {
+            padding: 0.75rem;
+            text-align: center;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            background: var(--bg);
+            border-top: 1px solid var(--border);
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .search-form {
+                flex-direction: column;
+            }
+
+            .upload-label {
+                text-align: center;
+            }
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <h1>Image retrieval system</h1>
+        <header class="header">
+            <h1>Image Retrieval System</h1>
+            <p>Image and Text Retrieval System Based on DINOv2 and CLIP</p>
+        </header>
 
-        <div class="input-group">
-            <input type="file" id="imageUpload" accept="image/*">
-            <button id="retrieveButton">Start search</button>
-        </div>
-
-        <div class="input-group">
-            <input type="text" id="textSearch" placeholder="输入文本进行搜索..." style="flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px;">
-            <button id="textSearchButton">文本搜索</button>
+        <div class="search-card">
+            <form class="search-form" id="searchForm">
+                <div class="search-input-wrapper">
+                    <input type="text" id="textSearch" class="search-input"
+                        placeholder="Enter keywords to search, or click the upload button to search by image...">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <label class="upload-label" for="imageUpload">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                </label>
+                <input type="file" id="imageUpload" accept="image/*">
+            </form>
+            <div class="progress">
+                <div class="progress-bar"></div>
+            </div>
         </div>
 
         <p id="statusMessage"></p>
-
-        <div id="results">
-        </div>
+        <div class="results-grid" id="results"></div>
     </div>
 
     <script>
         const imageUpload = document.getElementById('imageUpload');
-        const retrieveButton = document.getElementById('retrieveButton');
+        const searchForm = document.getElementById('searchForm');
+        const textSearch = document.getElementById('textSearch');
         const statusMessage = document.getElementById('statusMessage');
         const results = document.getElementById('results');
+        const searchCard = document.querySelector('.search-card');
+        const progressBar = document.querySelector('.progress-bar');
 
-        retrieveButton.addEventListener('click', async function () {
-            if (!imageUpload.files.length) {
-                statusMessage.textContent = 'Please select the image you want to retrieve';
+        async function handleImageUpload(file) {
+            if (file.size > 10 * 1024 * 1024) {
+                statusMessage.textContent = 'File size cannot exceed 10MB';
                 return;
             }
 
-            statusMessage.textContent = 'Retrieving...';
             const formData = new FormData();
-            formData.append('file', imageUpload.files[0]);
+            formData.append('file', file);
 
             try {
+                searchCard.classList.add('loading');
+                progressBar.style.width = '30%';
+
                 const response = await fetch('/retrieve', {
                     method: 'POST',
                     body: formData
                 });
+
+                progressBar.style.width = '100%';
+                setTimeout(() => {
+                    searchCard.classList.remove('loading');
+                    progressBar.style.width = '0';
+                }, 500);
+
                 const data = await response.json();
-
-                if (data.error) {
-                    statusMessage.textContent = data.error;
-                } else {
-                    results.innerHTML = '';
-                    data.results.forEach(result => {
-                        const div = document.createElement('div');
-                        div.className = 'result-item';
-
-                        const img = document.createElement('img');
-                        img.src = result.url;
-                        img.alt = 'retrieve result';
-
-                        const similarity = document.createElement('span');
-                        similarity.className = 'similarity';
-                        similarity.textContent = `Similarity: ${result.similarity.toFixed(4)}`;
-
-                        div.appendChild(img);
-                        div.appendChild(similarity);
-                        results.appendChild(div);
-                    });
-                    statusMessage.textContent = `find ${data.results.length} images`;
-                }
+                handleResponse(data);
             } catch (error) {
+                searchCard.classList.remove('loading');
                 statusMessage.textContent = 'An error occurred during retrieval';
                 console.error('Error:', error);
             }
-        });
+        }
 
-        const textSearch = document.getElementById('textSearch');
-        const textSearchButton = document.getElementById('textSearchButton');
+        async function handleTextSearch(text) {
+            try {
+                searchCard.classList.add('loading');
+                progressBar.style.width = '30%';
 
-        textSearchButton.addEventListener('click', async function () {
-            if (!textSearch.value.trim()) {
-                statusMessage.textContent = '请输入搜索文本';
+                const response = await fetch('/text_retrieve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+
+                progressBar.style.width = '100%';
+                setTimeout(() => {
+                    searchCard.classList.remove('loading');
+                    progressBar.style.width = '0';
+                }, 500);
+
+                const data = await response.json();
+                handleResponse(data);
+            } catch (error) {
+                searchCard.classList.remove('loading');
+                statusMessage.textContent = 'An error occurred during retrieval';
+                console.error('Error:', error);
+            }
+        }
+
+        function handleResponse(data) {
+            if (data.error) {
+                statusMessage.textContent = data.error;
+                results.innerHTML = '';
                 return;
             }
 
-            statusMessage.textContent = '检索中...';
-            
-            try {
-                const response = await fetch('/text_retrieve', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        text: textSearch.value.trim()
-                    })
-                });
-                const data = await response.json();
+            results.innerHTML = '';
+            data.results.forEach(result => {
+                const card = document.createElement('div');
+                card.className = 'result-card';
 
-                if (data.error) {
-                    statusMessage.textContent = data.error;
-                } else {
-                    results.innerHTML = '';
-                    data.results.forEach(result => {
-                        const div = document.createElement('div');
-                        div.className = 'result-item';
+                const img = document.createElement('img');
+                img.src = result.url;
+                img.alt = 'Search Result';
+                img.className = 'result-image';
+                img.loading = 'lazy';
 
-                        const img = document.createElement('img');
-                        img.src = result.url;
-                        img.alt = 'retrieve result';
+                const similarity = document.createElement('div');
+                similarity.className = 'result-similarity';
+                similarity.textContent = `Similarity: ${result.similarity.toFixed(3)}`;
 
-                        const similarity = document.createElement('span');
-                        similarity.className = 'similarity';
-                        similarity.textContent = `相似度: ${result.similarity.toFixed(4)}`;
+                card.appendChild(img);
+                card.appendChild(similarity);
+                results.appendChild(card);
+            });
 
-                        div.appendChild(img);
-                        div.appendChild(similarity);
-                        results.appendChild(div);
-                    });
-                    statusMessage.textContent = `找到 ${data.results.length} 张图片`;
-                }
-            } catch (error) {
-                statusMessage.textContent = '检索过程中发生错误';
-                console.error('Error:', error);
+            statusMessage.textContent = `Found ${data.results.length} matching images`;
+        }
+
+        imageUpload.addEventListener('change', (e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+                statusMessage.textContent = 'Searching...';
+                handleImageUpload(file);
             }
+        });
+
+        searchForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = textSearch.value.trim();
+            if (text) {
+                statusMessage.textContent = 'Searching...';
+                handleTextSearch(text);
+            }
+        });
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        const debouncedSearch = debounce((text) => {
+            if (text) {
+                statusMessage.textContent = 'Searching...';
+                handleTextSearch(text);
+            } else {
+                results.innerHTML = '';
+                statusMessage.textContent = '';
+            }
+        }, 500);
+
+        textSearch.addEventListener('input', (e) => {
+            debouncedSearch(e.target.value.trim());
         });
     </script>
 </body>

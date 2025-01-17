@@ -15,7 +15,7 @@
 
 ## 用户界面
 
-![DINOv2图像检索系统界面](./images/image.png)
+![DINOv2图像检索系统界面](./images/web.png)
 
 ## 安装
 
@@ -38,9 +38,19 @@ https://pan.baidu.com/s/1fBVgg_o8PTFEu_2vtLY25Q
 提取码: f9ww 
 ```
 
+4. 配置环境变量:
+在根目录创建 `.env` 文件，内容如下：
+```bash
+SERVER_URL="0.0.0.0"
+SERVER_PORT=5999
+MODEL_PATH="./Dinov2_model/dinov2-small"
+MODEL_SIZE="small"
+DATABASE_FOLDER="./quary"
+```
+
 ## 使用方法
 
-1. 准备您的图像数据库，将图片放置在`qurary`文件夹中（或者指定一个自定义文件夹）。
+1. 准备您的图像数据库，将图片放置在`quary`文件夹中（或在.env中指定自定义文件夹）。
 
 2. 运行应用程序:
 
@@ -56,20 +66,23 @@ sh run.sh start
 
 ## 配置
 
-运行应用程序时，您可以配置以下参数:
+您可以在.env文件中配置以下参数:
 
-- `--model_path`: DINOv2模型的路径（默认："./Dinov2_model/dinov2-small"）
-- `--model_size`: DINOv2模型的大小（选择：small, base, large, giant；默认：small）
-- `--database_folder`: 图像数据库文件夹的路径（默认："./qurary"）
+- `SERVER_URL`: 服务器IP地址（默认："0.0.0.0"）
+- `SERVER_PORT`: 服务器端口号（默认：5999）
+- `MODEL_PATH`: DINOv2模型的路径（默认："./Dinov2_model/dinov2-small"）
+- `MODEL_SIZE`: DINOv2模型的大小（可选：small, base, large, giant；默认：small）
+- `DATABASE_FOLDER`: 图像数据库文件夹的路径（默认："./quary"）
 
 ## 项目结构
 
-- `main.py`：主应用程序文件，包含FastAPI服务器
-- `model/Diniv2.py`：DINOv2模型加载器
-- `model/clip_model.py`：CLIP模型加载器
-- `utils/image_preprocessor.py`：图像预处理工具
-- `utils/retrieval_processor.py`: 图像检索
-- `static/index.html`：Web界面
+- `main.py`: 主应用程序文件，包含FastAPI服务器
+- `retrieval/model/Diniv2.py`：DINOv2模型加载器
+- `retrieval/model/clip_model.py`: CLIP模型加载器
+- `retrieval/services/utils/image_process.py`: 图像预处理工具
+- `retrieval/retrieval.py`: 图像检索主逻辑
+- `static/index.html`: Web界面
+
 
 ## 配置需求
 
