@@ -7,3 +7,4 @@ pillow
 fastapi
 numpy
 tqdm
+joblib

@@ -1,10 +1,10 @@
-import numpy as np
+import os
 import torch
+import numpy as np
 import torch.nn as nn
 from pathlib import Path
 from tqdm import tqdm
-import pickle
-import os
+from joblib import dump, load
 from ..config.logger import set_logger
 
 logger = set_logger("retrieval", "INFO")
@@ -17,8 +17,8 @@ class RetrievalProcessor:
         self.clip_loader = clip_loader
         self.preprocessor = preprocessor
         self.database_folder = Path(database_folder)
-        self.dinov2_cache_path = self.database_folder / "dinov2_features_cache.pkl"
-        self.clip_cache_path = self.database_folder / "clip_features_cache.pkl"
+        self.dinov2_cache_path = self.database_folder / "dinov2_features_cache.joblib"
+        self.clip_cache_path = self.database_folder / "clip_features_cache.joblib"
         self.dinov2_features, self.database_paths = self.get_dinov2_features()
         self.clip_features = self.get_clip_features()
         self.cos = nn.CosineSimilarity(dim=0)
@@ -60,45 +60,72 @@ class RetrievalProcessor:
         """Get DINOv2 features from cache if available, otherwise compute them"""
         if self.dinov2_cache_path.exists():
             logger.info("Loading DINOv2 features from cache")
-            with open(self.dinov2_cache_path, "rb") as f:
-                features, paths = pickle.load(f)
-            logger.info(f"Loaded {len(features)} DINOv2 features from cache")
+            try:
+                features, paths = load(self.dinov2_cache_path, mmap_mode="r")
+                logger.info(f"Loaded {len(features)} DINOv2 features from cache")
+            except Exception as e:
+                logger.error(f"Error loading cache: {str(e)}")
+                features, paths = self._compute_and_save_dinov2_features()
         else:
             logger.info("Cache not found. Computing DINOv2 features from images")
-            img_paths = self.get_image_files()
-            if len(img_paths) == 0:
-                raise ValueError(
-                    f"No images found in the database folder: {self.database_folder}"
-                )
-            features = self.compute_dinov2_features(img_paths)
-            paths = img_paths
-            logger.info(f"Computed DINOv2 features from {len(features)} images")
-            with open(self.dinov2_cache_path, "wb") as f:
-                pickle.dump((features, paths), f)
+            features, paths = self._compute_and_save_dinov2_features()
 
         if len(features) == 0:
             raise ValueError("No features available in the database.")
         return features, paths
 
+    def _compute_and_save_dinov2_features(self):
+        """Helper method to compute and cache DINOv2 features"""
+        img_paths = self.get_image_files()
+        if len(img_paths) == 0:
+            raise ValueError(
+                f"No images found in the database folder: {self.database_folder}"
+            )
+        features = self.compute_dinov2_features(img_paths)
+        paths = img_paths
+        logger.info(f"Computed DINOv2 features from {len(features)} images")
+
+        try:
+            dump((features, paths), self.dinov2_cache_path, compress=3)
+            logger.info("Successfully cached DINOv2 features")
+        except Exception as e:
+            logger.error(f"Error saving cache: {str(e)}")
+
+        return features, paths
+
     def get_clip_features(self):
+        """Get CLIP features from cache if available, otherwise compute them"""
         if self.clip_cache_path.exists():
             logger.info("Loading CLIP features from cache")
-            with open(self.clip_cache_path, "rb") as f:
-                features = pickle.load(f)
+            try:
+                features = load(self.clip_cache_path, mmap_mode="r")
+            except Exception as e:
+                logger.error(f"Error loading CLIP cache: {str(e)}")
+                features = self._compute_and_save_clip_features()
         else:
             logger.info("Computing CLIP features from images")
-            features = []
-            for img_path in tqdm(self.database_paths, desc="Computing CLIP features"):
-                img = self.preprocessor.preprocess(img_path)
-                with torch.no_grad():
-                    feature = torch.tensor(
-                        self.clip_loader.extract_image_features(img)
-                    ).to(self.device)
-                    feature = feature / torch.norm(feature)
-                features.append(feature)
-            features = torch.stack(features)
-            with open(self.clip_cache_path, "wb") as f:
-                pickle.dump(features, f)
+            features = self._compute_and_save_clip_features()
+        return features
+
+    def _compute_and_save_clip_features(self):
+        """Helper method to compute and cache CLIP features"""
+        features = []
+        for img_path in tqdm(self.database_paths, desc="Computing CLIP features"):
+            img = self.preprocessor.preprocess(img_path)
+            with torch.no_grad():
+                feature = torch.tensor(self.clip_loader.extract_image_features(img)).to(
+                    self.device
+                )
+                feature = feature / torch.norm(feature)
+            features.append(feature)
+        features = torch.stack(features)
+
+        try:
+            dump(features, self.clip_cache_path, compress=3)
+            logger.info("Successfully cached CLIP features")
+        except Exception as e:
+            logger.error(f"Error saving CLIP cache: {str(e)}")
+
         return features
 
     def calculate_dinov2_similarity(self, query_feature):
@@ -111,7 +138,6 @@ class RetrievalProcessor:
         similarities = []
         for feature in self.dinov2_features:
             sim = self.cos(query_tensor, feature).item()
-            sim = sim
             similarities.append(sim)
 
         return np.array(similarities)
