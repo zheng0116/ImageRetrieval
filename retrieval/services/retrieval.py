@@ -22,6 +22,7 @@ class RetrievalProcessor:
         self.dinov2_features, self.database_paths = self.get_dinov2_features()
         self.clip_features = self.get_clip_features()
         self.cos = nn.CosineSimilarity(dim=0)
+        self.top_k = int(os.getenv("TOP_K", 5))
 
     def get_image_files(self):
         """Get all image files from the database folder"""
@@ -150,7 +151,7 @@ class RetrievalProcessor:
         logger.info(f"Database features shape: {self.dinov2_features.shape}")
 
         similarities = self.calculate_dinov2_similarity(query_feature)
-        sorted_indices = np.argsort(similarities)[::-1]
+        sorted_indices = np.argsort(similarities)[::-1][: self.top_k]
 
         return [
             (str(self.database_paths[i]), float(similarities[i]))
@@ -170,7 +171,7 @@ class RetrievalProcessor:
                 similarities.append(sim)
 
             similarities = np.array(similarities)
-            sorted_indices = np.argsort(similarities)[::-1]
+            sorted_indices = np.argsort(similarities)[::-1][: self.top_k]
 
             return [
                 (str(self.database_paths[i]), float(similarities[i]))
