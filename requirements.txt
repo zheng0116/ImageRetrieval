@@ -8,3 +8,4 @@ fastapi
 numpy
 tqdm
 joblib
+loguru
