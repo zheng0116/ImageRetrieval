@@ -25,7 +25,6 @@ class RetrievalProcessor:
         self.top_k = int(os.getenv("TOP_K", 5))
 
     def get_image_files(self):
-        """Get all image files from the database folder"""
         support_formats = ("*.jpg", "*.jpeg", "*.png")
         image_paths = [
             path
@@ -44,7 +43,6 @@ class RetrievalProcessor:
         return image_paths
 
     def compute_dinov2_features(self, img_paths):
-        """Compute DINOv2 features for a list of images"""
         features = []
         for img_path in tqdm(img_paths, desc="Computing DINOv2 features"):
             try:
@@ -58,7 +56,6 @@ class RetrievalProcessor:
         return torch.stack(features)
 
     def get_dinov2_features(self):
-        """Get DINOv2 features from cache if available, otherwise compute them"""
         if self.dinov2_cache_path.exists():
             logger.info("Loading DINOv2 features from cache")
             try:
@@ -66,17 +63,16 @@ class RetrievalProcessor:
                 logger.info(f"Loaded {len(features)} DINOv2 features from cache")
             except Exception as e:
                 logger.error(f"Error loading cache: {str(e)}")
-                features, paths = self._compute_and_save_dinov2_features()
+                features, paths = self.cache_dionv2_features()
         else:
             logger.info("Cache not found. Computing DINOv2 features from images")
-            features, paths = self._compute_and_save_dinov2_features()
+            features, paths = self.cache_dionv2_features()
 
         if len(features) == 0:
             raise ValueError("No features available in the database.")
         return features, paths
 
-    def _compute_and_save_dinov2_features(self):
-        """Helper method to compute and cache DINOv2 features"""
+    def cache_dionv2_features(self):
         img_paths = self.get_image_files()
         if len(img_paths) == 0:
             raise ValueError(
@@ -95,21 +91,19 @@ class RetrievalProcessor:
         return features, paths
 
     def get_clip_features(self):
-        """Get CLIP features from cache if available, otherwise compute them"""
         if self.clip_cache_path.exists():
             logger.info("Loading CLIP features from cache")
             try:
                 features = load(self.clip_cache_path, mmap_mode="r")
             except Exception as e:
                 logger.error(f"Error loading CLIP cache: {str(e)}")
-                features = self._compute_and_save_clip_features()
+                features = self.cache_clip_features()
         else:
             logger.info("Computing CLIP features from images")
-            features = self._compute_and_save_clip_features()
+            features = self.cache_clip_features()
         return features
 
-    def _compute_and_save_clip_features(self):
-        """Helper method to compute and cache CLIP features"""
+    def cache_clip_features(self):
         features = []
         for img_path in tqdm(self.database_paths, desc="Computing CLIP features"):
             img = self.preprocessor.preprocess(img_path)

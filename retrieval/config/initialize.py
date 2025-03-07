@@ -16,17 +16,16 @@ class Initializer:
         self.routes = None
 
     def initialize(self):
-        self._setup_static_files()
-        self._initialize_components()
-        self._setup_routes()
-        self._setup_root_route()
+        self.setup_static_files()
+        self.initialize_components()
+        self.setup_routes()
+        self.setup_root_route()
         return self.app
 
-    def _setup_static_files(self):
+    def setup_static_files(self):
         self.app.mount("/static", StaticFiles(directory="static"), name="static")
 
-    def _initialize_components(self):
-        """Initialize model components and processors"""
+    def initialize_components(self):
         logger.info(
             f"Initializing system with database folder: {self.config['database_folder']}"
         )
@@ -46,14 +45,11 @@ class Initializer:
             self.config["database_folder"],
         )
 
-    def _setup_routes(self):
-        """Initialize and setup routes"""
+    def setup_routes(self):
         self.routes = Routes(self.retriever, self.config["database_folder"])
         self.app.include_router(self.routes.router)
 
-    def _setup_root_route(self):
-        """Setup the root route for the application"""
-
+    def setup_root_route(self):
         @self.app.get("/")
         async def read_root():
             return FileResponse("static/index.html")
