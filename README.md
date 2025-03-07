@@ -76,12 +76,12 @@ You can configure the following parameters in your .env file:
 ## Project Structure
 
 - `main.py`: Main application file with FastAPI server
-- `retrieval/model/Diniv2.py`: DINOv2 model loader
-- `retrieval/model/clip_model.py`: CLIP model loader
+- `retrieval/services/model/Diniv2.py`: DINOv2 model loader
+- `retrieval/services/model/clip.py`: CLIP model loader
 - `retrieval/services/utils/image_process.py`: Image preprocessing 
-- `retrieval/retrieval.py`: Image retrieval logic
+- `retrieval/services/retrieval.py`: Image retrieval logic
 - `static/index.html`: Web interface
-
+- `config` : Logging configuration, model initialization and routing configuration
 ## Requirements
 
 - Python 3.7+

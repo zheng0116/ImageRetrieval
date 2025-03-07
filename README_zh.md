@@ -77,12 +77,12 @@ sh run.sh start
 ## 项目结构
 
 - `main.py`: 主应用程序文件，包含FastAPI服务器
-- `retrieval/model/Diniv2.py`：DINOv2模型加载器
-- `retrieval/model/clip_model.py`: CLIP模型加载器
+- `retrieval/services/model/Diniv2.py`：DINOv2模型加载器
+- `retrieval/services/model/clip.py`: CLIP模型加载器
 - `retrieval/services/utils/image_process.py`: 图像预处理工具
-- `retrieval/retrieval.py`: 图像检索主逻辑
+- `retrieval/services/retrieval.py`: 图像检索主逻辑
 - `static/index.html`: Web界面
-
+- `config` : 日志配置、模型初始化和路由配置
 
 ## 配置需求
 
