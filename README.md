@@ -3,7 +3,9 @@
     English</strong>
 ## 🌟 Introduction
 This project is an image retrieval system based on DINOv2 and CLIP models, supporting both image-to-image and text-to-image retrieval. Users can upload an image or input text description to retrieve similar images from a predefined image database.
-
+## Todo
+- [x] support database
+- [x] using rust language achieve
 ## 🚀 Features
 - Image feature extraction using the DINOv2 model for image-to-image search
 - Text-to-image search powered by CLIP model
