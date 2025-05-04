@@ -7,6 +7,7 @@ This project is an image retrieval system based on DINOv2 and CLIP models, suppo
 - [x] support database
 - [x] using rust language achieve
 - [x] support different models to extract image features and text features
+- [x] support rpc agreement
 ## 🚀 Features
 - Image feature extraction using the DINOv2 model for image-to-image search
 - Text-to-image search powered by CLIP model
