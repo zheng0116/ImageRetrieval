@@ -14,6 +14,10 @@ config = {
     "database_folder": os.getenv("DATABASE_FOLDER"),
     "model_size": os.getenv("MODEL_SIZE"),
     "model_path": os.getenv("MODEL_PATH"),
+    "overall_model": os.getenv(
+        "OVERALL_MODEL", "False"
+    ),  # based on clip model achive overall retrieval,deafult is False
+    "top_k": int(os.getenv("TOP_K", 20)),
 }
 
 initializer = Initializer(config)

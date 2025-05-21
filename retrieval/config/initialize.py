@@ -31,7 +31,9 @@ class Initializer:
         )
         logger.info(f"Model size: {self.config['model_size']}")
         logger.info(f"Model path: {self.config['model_path']}")
-
+        logger.info(
+            f"Overall model: {self.config['overall_model']}"
+        )  # based on clip achive overall retrieval
         dinov2_loader = Dinov2(
             model_size=self.config["model_size"], model_path=self.config["model_path"]
         )
@@ -43,6 +45,8 @@ class Initializer:
             clip_loader,
             self.preprocessor,
             self.config["database_folder"],
+            self.config["overall_model"],
+            self.config["top_k"],
         )
 
     def setup_routes(self):

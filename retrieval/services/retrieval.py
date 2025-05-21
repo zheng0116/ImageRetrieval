@@ -11,18 +11,29 @@ logger = set_logger("retrieval", "INFO")
 
 
 class RetrievalProcessor:
-    def __init__(self, Dinov2_loader, clip_loader, preprocessor, database_folder):
+    def __init__(
+        self,
+        Dinov2_loader,
+        clip_loader,
+        preprocessor,
+        database_folder,
+        overall_model,
+        top_k,
+    ):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.Dinov2 = Dinov2_loader
         self.clip_loader = clip_loader
         self.preprocessor = preprocessor
         self.database_folder = Path(database_folder)
+        self.overall_model = (
+            overall_model  # based on clip model achive overall retrieval
+        )
         self.dinov2_cache_path = self.database_folder / "dinov2_features_cache.joblib"
         self.clip_cache_path = self.database_folder / "clip_features_cache.joblib"
         self.dinov2_features, self.database_paths = self.get_dinov2_features()
         self.clip_features = self.get_clip_features()
         self.cos = nn.CosineSimilarity(dim=0)
-        self.top_k = int(os.getenv("TOP_K", 5))
+        self.top_k = top_k
 
     def get_image_files(self):
         support_formats = ("*.jpg", "*.jpeg", "*.png")
@@ -137,15 +148,34 @@ class RetrievalProcessor:
 
         return np.array(similarities)
 
+    def calculate_clip_similarity(self, query_feature):
+        if self.clip_features.shape[0] == 0:
+            raise ValueError("CLIP features are empty.")
+
+        query_tensor = torch.tensor(query_feature).to(self.device)
+        query_tensor = query_tensor / torch.norm(query_tensor)
+
+        similarities = []
+        for feature in self.clip_features:
+            sim = self.cos(query_tensor, feature).item()
+            similarities.append(sim)
+
+        return np.array(similarities)
+
     def image_to_image_retrieve(self, query_image):
         query_image = self.preprocessor.preprocess(query_image)
-        query_feature = self.Dinov2(query_image)
-
-        logger.info(f"Query feature shape: {query_feature.shape}")
-        logger.info(f"Database features shape: {self.dinov2_features.shape}")
-
-        similarities = self.calculate_dinov2_similarity(query_feature)
-        sorted_indices = np.argsort(similarities)[::-1][: self.top_k]
+        if self.overall_model == "True":
+            query_feature = self.clip_loader.extract_image_features(query_image)
+            logger.info(f"Query feature shape: {query_feature.shape}")
+            logger.info(f"Clip_Database features shape: {self.clip_features.shape}")
+            similarities = self.calculate_clip_similarity(query_feature)
+            sorted_indices = np.argsort(similarities)[::-1][: self.top_k]
+        else:
+            query_feature = self.Dinov2(query_image)
+            logger.info(f"Query feature shape: {query_feature.shape}")
+            logger.info(f"Dinov2_Database features shape: {self.dinov2_features.shape}")
+            similarities = self.calculate_dinov2_similarity(query_feature)
+            sorted_indices = np.argsort(similarities)[::-1][: self.top_k]
 
         return [
             (str(self.database_paths[i]), float(similarities[i]))
