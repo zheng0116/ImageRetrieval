@@ -1,5 +1,5 @@
 import shutil
-from fastapi import APIRouter, UploadFile, File, Request
+from fastapi import APIRouter, UploadFile, File, Request, HTTPException
 from fastapi.responses import FileResponse
 from pathlib import Path
 from .logger import set_logger
@@ -55,4 +55,51 @@ class Routes:
                     ]
                 }
             except Exception as e:
+                return {"error": str(e)}
+
+        @self.router.post("/add_image")
+        async def add_image(file: UploadFile = File(...)):
+            try:
+                file_path = Path(self.database_folder) / file.filename
+                with file_path.open("wb") as buffer:
+                    shutil.copyfileobj(file.file, buffer)
+
+                self.retriever.add_images([file_path])
+
+                return {"message": f"Image {file.filename} added successfully"}
+            except Exception as e:
+                logger.error(f"Error adding image: {str(e)}")
+                return {"error": str(e)}
+
+        @self.router.delete("/delete_image/{image_name}")
+        async def delete_image(image_name: str):
+            """Delete an image from the database"""
+            try:
+                image_path = Path(self.database_folder) / image_name
+                if not image_path.exists():
+                    raise HTTPException(status_code=404, detail="Image not found")
+                self.retriever.delete_image(image_path)
+                image_path.unlink()
+
+                return {"message": f"Image {image_name} deleted successfully"}
+            except Exception as e:
+                logger.error(f"Error deleting image: {str(e)}")
+                return {"error": str(e)}
+
+        @self.router.get("/database_stats")
+        async def get_database_stats():
+            try:
+                stats = self.retriever.get_database_stats()
+                return stats
+            except Exception as e:
+                logger.error(f"Error getting database stats: {str(e)}")
+                return {"error": str(e)}
+
+        @self.router.post("/rebuild_database")
+        async def rebuild_database():
+            try:
+                self.retriever.check_features()
+                return {"message": "Database rebuilt successfully"}
+            except Exception as e:
+                logger.error(f"Error rebuilding database: {str(e)}")
                 return {"error": str(e)}

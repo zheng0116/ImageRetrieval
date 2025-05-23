@@ -2,19 +2,20 @@
  <strong>[中文](./README_zh.md) |
     English</strong>
 ## 🌟 Introduction
-This project is an image retrieval system based on DINOv2 and CLIP models, supporting both image-to-image and text-to-image retrieval. Users can upload an image or input text description to retrieve similar images from a predefined image database.
+This project is an image retrieval system based on DINOv2 and CLIP models. It uses Chroma vector database to support both text-to-image and image-to-image retrieval.
+
 ## Todo
-- [x] support database
-- [x] using rust language achieve
-- [x] support different models to extract image features and text features
-- [x] support rpc agreement
+- [x] support embedding database
+- [ ] using rust language achieve
+- [ ] support different models to extract image features and text features
+- [ ] support rpc agreement
 ## 🚀 Features
 - Image feature extraction using the DINOv2 model for image-to-image search
 - Text-to-image search powered by CLIP model
 - Support for different sizes of DINOv2 models (small, base, large, giant)
 - Image retrieval based on cosine similarity
 - Web interface built with FastAPI
-- Feature caching for large-scale image databases
+- Uses Chroma vector database to retrieval images
 
 ## User Interface
 
@@ -89,6 +90,7 @@ You can configure the following parameters in your .env file:
 ## Requirements
 
 - Python 3.7+
+- chroma
 - FastAPI
 - Uvicorn
 - PyTorch

@@ -4,7 +4,8 @@ import numpy as np
 import torch.nn as nn
 from pathlib import Path
 from tqdm import tqdm
-from joblib import dump, load
+import chromadb
+from chromadb.config import Settings
 from ..config.logger import set_logger
 
 logger = set_logger("retrieval", "INFO")
@@ -25,15 +26,27 @@ class RetrievalProcessor:
         self.clip_loader = clip_loader
         self.preprocessor = preprocessor
         self.database_folder = Path(database_folder)
-        self.overall_model = (
-            overall_model  # based on clip model achive overall retrieval
-        )
-        self.dinov2_cache_path = self.database_folder / "dinov2_features_cache.joblib"
-        self.clip_cache_path = self.database_folder / "clip_features_cache.joblib"
-        self.dinov2_features, self.database_paths = self.get_dinov2_features()
-        self.clip_features = self.get_clip_features()
-        self.cos = nn.CosineSimilarity(dim=0)
+        self.overall_model = overall_model
         self.top_k = top_k
+        self.chroma_db_path = self.database_folder / "chroma_db"
+        self.chroma_db_path.mkdir(exist_ok=True)
+
+        self.chroma_client = chromadb.PersistentClient(
+            path=str(self.chroma_db_path), settings=Settings(anonymized_telemetry=False)
+        )
+
+        self.dinov2_collection = self.chroma_client.get_or_create_collection(
+            name="dinov2_features", metadata={"hnsw:space": "cosine"}
+        )
+
+        self.clip_collection = self.chroma_client.get_or_create_collection(
+            name="clip_features", metadata={"hnsw:space": "cosine"}
+        )
+
+        self.database_paths = self.get_image_files()
+        self.check_features()
+
+        self.cos = nn.CosineSimilarity(dim=0)
 
     def get_image_files(self):
         support_formats = ("*.jpg", "*.jpeg", "*.png")
@@ -42,162 +55,252 @@ class RetrievalProcessor:
             for pattern in support_formats
             for path in self.database_folder.glob(pattern)
         ]
-        logger.info(f"Contents of {self.database_folder}:")
-        for item in os.listdir(self.database_folder):
-            full_path = self.database_folder / item
-            if full_path.is_dir():
-                logger.info(f"  Directory: {item}")
-                for subitem in os.listdir(full_path):
-                    logger.info(f"    {subitem}")
-            else:
-                logger.info(f"  File: {item}")
         return image_paths
 
-    def compute_dinov2_features(self, img_paths):
-        features = []
-        for img_path in tqdm(img_paths, desc="Computing DINOv2 features"):
+    def check_features(self):
+        dinov2_count = self.dinov2_collection.count()  # Count DINOv2 features
+        clip_count = self.clip_collection.count()  # Count CLIP features
+        expected_count = len(self.database_paths)  # database size
+
+        if (
+            dinov2_count == 0 or abs(dinov2_count - expected_count) > 0
+        ):  # todo revise logic
+            logger.info("Computing and storing DINOv2 features...")
+            self.store_dinov2_features()
+        else:
+            logger.info("DINOv2 features already exist in database")
+
+        if clip_count == 0 or abs(clip_count - expected_count) > 0:
+            logger.info("Computing and storing CLIP features...")
+            self.store_clip_features()
+        else:
+            logger.info("CLIP features already exist in database")
+
+    def store_dinov2_features(self):
+        if len(self.database_paths) == 0:
+            raise ValueError(
+                f"No images found in the database folder: {self.database_folder}"
+            )
+        try:
+            self.chroma_client.delete_collection("dinov2_features")
+        except Exception as e:
+            logger.info(
+                f"Collection dinov2_features doesn't exist or couldn't be deleted: {e}"
+            )
+        self.dinov2_collection = self.chroma_client.get_or_create_collection(
+            name="dinov2_features", metadata={"hnsw:space": "cosine"}
+        )
+        embeddings = []
+        documents = []
+        ids = []
+        metadatas = []
+
+        for idx, img_path in enumerate(
+            tqdm(self.database_paths, desc="Computing DINOv2 features")
+        ):
             try:
                 img = self.preprocessor.preprocess(img_path)
                 with torch.no_grad():
                     feature = torch.tensor(self.Dinov2(img)).to(self.device)
                     feature = feature / torch.norm(feature)
-                features.append(feature)
+
+                embeddings.append(feature.cpu().numpy().tolist())
+                documents.append(str(img_path))
+                ids.append(f"dinov2_{idx}")
+                metadatas.append({"image_path": str(img_path), "type": "dinov2"})
+
             except Exception as e:
                 logger.error(f"Error processing image {img_path}: {str(e)}")
-        return torch.stack(features)
 
-    def get_dinov2_features(self):
-        if self.dinov2_cache_path.exists():
-            logger.info("Loading DINOv2 features from cache")
-            try:
-                features, paths = load(self.dinov2_cache_path, mmap_mode="r")
-                logger.info(f"Loaded {len(features)} DINOv2 features from cache")
-            except Exception as e:
-                logger.error(f"Error loading cache: {str(e)}")
-                features, paths = self.cache_dionv2_features()
-        else:
-            logger.info("Cache not found. Computing DINOv2 features from images")
-            features, paths = self.cache_dionv2_features()
-
-        if len(features) == 0:
-            raise ValueError("No features available in the database.")
-        return features, paths
-
-    def cache_dionv2_features(self):
-        img_paths = self.get_image_files()
-        if len(img_paths) == 0:
-            raise ValueError(
-                f"No images found in the database folder: {self.database_folder}"
+        if embeddings:
+            self.dinov2_collection.add(
+                embeddings=embeddings, documents=documents, ids=ids, metadatas=metadatas
             )
-        features = self.compute_dinov2_features(img_paths)
-        paths = img_paths
-        logger.info(f"Computed DINOv2 features from {len(features)} images")
+            logger.info(f"Successfully stored {len(embeddings)} DINOv2 features")
 
+    def store_clip_features(self):
         try:
-            dump((features, paths), self.dinov2_cache_path, compress=3)
-            logger.info("Successfully cached DINOv2 features")
+            self.chroma_client.delete_collection("clip_features")
         except Exception as e:
-            logger.error(f"Error saving cache: {str(e)}")
+            logger.info(
+                f"Collection clip_features doesn't exist or couldn't be deleted: {e}"
+            )
 
-        return features, paths
+        self.clip_collection = self.chroma_client.get_or_create_collection(
+            name="clip_features", metadata={"hnsw:space": "cosine"}
+        )
 
-    def get_clip_features(self):
-        if self.clip_cache_path.exists():
-            logger.info("Loading CLIP features from cache")
+        embeddings = []
+        documents = []
+        ids = []
+        metadatas = []
+
+        for idx, img_path in enumerate(
+            tqdm(self.database_paths, desc="Computing CLIP features")
+        ):
             try:
-                features = load(self.clip_cache_path, mmap_mode="r")
+                img = self.preprocessor.preprocess(img_path)
+                with torch.no_grad():
+                    feature = torch.tensor(
+                        self.clip_loader.extract_image_features(img)
+                    ).to(self.device)
+                    feature = feature / torch.norm(feature)
+
+                embeddings.append(feature.cpu().numpy().tolist())
+                documents.append(str(img_path))
+                ids.append(f"clip_{idx}")
+                metadatas.append({"image_path": str(img_path), "type": "clip"})
+
             except Exception as e:
-                logger.error(f"Error loading CLIP cache: {str(e)}")
-                features = self.cache_clip_features()
-        else:
-            logger.info("Computing CLIP features from images")
-            features = self.cache_clip_features()
-        return features
+                logger.error(f"Error processing image {img_path}: {str(e)}")
 
-    def cache_clip_features(self):
-        features = []
-        for img_path in tqdm(self.database_paths, desc="Computing CLIP features"):
-            img = self.preprocessor.preprocess(img_path)
-            with torch.no_grad():
-                feature = torch.tensor(self.clip_loader.extract_image_features(img)).to(
-                    self.device
-                )
-                feature = feature / torch.norm(feature)
-            features.append(feature)
-        features = torch.stack(features)
-
-        try:
-            dump(features, self.clip_cache_path, compress=3)
-            logger.info("Successfully cached CLIP features")
-        except Exception as e:
-            logger.error(f"Error saving CLIP cache: {str(e)}")
-
-        return features
-
-    def calculate_dinov2_similarity(self, query_feature):
-        if self.dinov2_features.shape[0] == 0:
-            raise ValueError("DINOv2 features are empty.")
-
-        query_tensor = torch.tensor(query_feature).to(self.device)
-        query_tensor = query_tensor / torch.norm(query_tensor)
-
-        similarities = []
-        for feature in self.dinov2_features:
-            sim = self.cos(query_tensor, feature).item()
-            similarities.append(sim)
-
-        return np.array(similarities)
-
-    def calculate_clip_similarity(self, query_feature):
-        if self.clip_features.shape[0] == 0:
-            raise ValueError("CLIP features are empty.")
-
-        query_tensor = torch.tensor(query_feature).to(self.device)
-        query_tensor = query_tensor / torch.norm(query_tensor)
-
-        similarities = []
-        for feature in self.clip_features:
-            sim = self.cos(query_tensor, feature).item()
-            similarities.append(sim)
-
-        return np.array(similarities)
+        if embeddings:
+            self.clip_collection.add(
+                embeddings=embeddings, documents=documents, ids=ids, metadatas=metadatas
+            )
+            logger.info(f"Successfully stored {len(embeddings)} CLIP features")
 
     def image_to_image_retrieve(self, query_image):
+        """Retrieve similar images using ChromaDB"""
         query_image = self.preprocessor.preprocess(query_image)
+
         if self.overall_model == "True":
+            # Use CLIP for retrieval
             query_feature = self.clip_loader.extract_image_features(query_image)
             logger.info(f"Query feature shape: {query_feature.shape}")
-            logger.info(f"Clip_Database features shape: {self.clip_features.shape}")
-            similarities = self.calculate_clip_similarity(query_feature)
-            sorted_indices = np.argsort(similarities)[::-1][: self.top_k]
+
+            results = self.clip_collection.query(
+                query_embeddings=[query_feature.tolist()], n_results=self.top_k
+            )
         else:
+            # Use DINOv2 for retrieval
             query_feature = self.Dinov2(query_image)
             logger.info(f"Query feature shape: {query_feature.shape}")
-            logger.info(f"Dinov2_Database features shape: {self.dinov2_features.shape}")
-            similarities = self.calculate_dinov2_similarity(query_feature)
-            sorted_indices = np.argsort(similarities)[::-1][: self.top_k]
 
-        return [
-            (str(self.database_paths[i]), float(similarities[i]))
-            for i in sorted_indices
-        ]
+            results = self.dinov2_collection.query(
+                query_embeddings=[query_feature.tolist()], n_results=self.top_k
+            )
+
+        retrieved_results = []
+        if results["documents"] and results["distances"]:
+            for doc, distance in zip(results["documents"][0], results["distances"][0]):
+                similarity = 1.0 - distance
+                retrieved_results.append((doc, float(similarity)))
+
+        return retrieved_results
 
     def text_to_image_retrieve(self, query_text):
         with torch.no_grad():
-            query_feature = torch.tensor(
-                self.clip_loader.extract_text_features(query_text)
-            ).to(self.device)
-            query_feature = query_feature / torch.norm(query_feature)
-            similarities = []
-            for feature in self.clip_features:
-                sim = self.cos(query_feature, feature).item()
-                sim = (sim + 1) / 2
-                similarities.append(sim)
+            query_feature = self.clip_loader.extract_text_features(query_text)
 
-            similarities = np.array(similarities)
-            sorted_indices = np.argsort(similarities)[::-1][: self.top_k]
+            results = self.clip_collection.query(
+                query_embeddings=[query_feature.tolist()], n_results=self.top_k
+            )
 
-            return [
-                (str(self.database_paths[i]), float(similarities[i]))
-                for i in sorted_indices
-            ]
+        retrieved_results = []
+        if results["documents"] and results["distances"]:
+            for doc, distance in zip(results["documents"][0], results["distances"][0]):
+                similarity = 1.0 - distance
+                similarity = (similarity + 1) / 2
+                retrieved_results.append((doc, float(similarity)))
+
+        return retrieved_results
+
+    def add_images(self, new_image_paths):
+        if not isinstance(new_image_paths, list):
+            new_image_paths = [new_image_paths]
+        self.database_paths.extend(new_image_paths)
+        dinov2_embeddings = []
+        dinov2_documents = []
+        dinov2_ids = []
+        dinov2_metadatas = []
+
+        clip_embeddings = []
+        clip_documents = []
+        clip_ids = []
+        clip_metadatas = []
+
+        start_idx = self.dinov2_collection.count()
+
+        for idx, img_path in enumerate(tqdm(new_image_paths, desc="Adding new images")):
+            try:
+                img = self.preprocessor.preprocess(img_path)
+
+                with torch.no_grad():
+                    dinov2_feature = torch.tensor(self.Dinov2(img)).to(self.device)
+                    dinov2_feature = dinov2_feature / torch.norm(dinov2_feature)
+
+                dinov2_embeddings.append(dinov2_feature.cpu().numpy().tolist())
+                dinov2_documents.append(str(img_path))
+                dinov2_ids.append(f"dinov2_{start_idx + idx}")
+                dinov2_metadatas.append({"image_path": str(img_path), "type": "dinov2"})
+
+                with torch.no_grad():
+                    clip_feature = torch.tensor(
+                        self.clip_loader.extract_image_features(img)
+                    ).to(self.device)
+                    clip_feature = clip_feature / torch.norm(clip_feature)
+
+                clip_embeddings.append(clip_feature.cpu().numpy().tolist())
+                clip_documents.append(str(img_path))
+                clip_ids.append(f"clip_{start_idx + idx}")
+                clip_metadatas.append({"image_path": str(img_path), "type": "clip"})
+
+            except Exception as e:
+                logger.error(f"Error processing new image {img_path}: {str(e)}")
+
+        if dinov2_embeddings:
+            self.dinov2_collection.add(
+                embeddings=dinov2_embeddings,
+                documents=dinov2_documents,
+                ids=dinov2_ids,
+                metadatas=dinov2_metadatas,
+            )
+
+        if clip_embeddings:
+            self.clip_collection.add(
+                embeddings=clip_embeddings,
+                documents=clip_documents,
+                ids=clip_ids,
+                metadatas=clip_metadatas,
+            )
+
+        logger.info(f"Successfully added {len(new_image_paths)} new images to database")
+
+    def delete_image(self, image_path):
+        image_path_str = str(image_path)
+
+        try:
+            dinov2_results = self.dinov2_collection.get(
+                where={"image_path": image_path_str}
+            )
+            if dinov2_results["ids"]:
+                self.dinov2_collection.delete(ids=dinov2_results["ids"])
+                logger.info(
+                    f"Deleted {len(dinov2_results['ids'])} DINOv2 features for {image_path}"
+                )
+            clip_results = self.clip_collection.get(
+                where={"image_path": image_path_str}
+            )
+            if clip_results["ids"]:
+                self.clip_collection.delete(ids=clip_results["ids"])
+                logger.info(
+                    f"Deleted {len(clip_results['ids'])} CLIP features for {image_path}"
+                )
+            if Path(image_path) in self.database_paths:
+                self.database_paths.remove(Path(image_path))
+
+            logger.info(f"Successfully deleted image {image_path} from database")
+
+        except Exception as e:
+            logger.error(f"Error deleting image {image_path}: {str(e)}")
+            raise
+
+    def get_database_stats(self):
+        return {
+            "total_images": len(self.database_paths),
+            "dinov2_features": self.dinov2_collection.count(),
+            "clip_features": self.clip_collection.count(),
+            "database_folder": str(self.database_folder),
+            "chroma_db_path": str(self.chroma_db_path),
+        }
