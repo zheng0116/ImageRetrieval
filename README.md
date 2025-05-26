@@ -1,49 +1,48 @@
-# Image Retrieval System
- <strong>[中文](./README_zh.md) |
-    English</strong>
-## 🌟 Introduction
-This project is an image retrieval system based on DINOv2 and CLIP models. It uses Chroma vector database to support both text-to-image and image-to-image retrieval.
+# 图像检索系统
+ <strong>[中文]|
+    [English](./README_en.md)</strong>
+## 🌟 概述
+本项目是一个基于DINOv2和CLIP模型的图像检索系统，使用Chroma向量数据库，支持文本到图像和图像到图像的检索。
+## 将来计划
+- [x] 支持向量数据库
+- [ ] 使用rust实现
+- [ ] 支持不同模型提取图像特征和文本特征
+- [ ] 支持rpc协议
+## 🚀 特征
+- 使用DINOv2模型进行图像特征提取和以图搜图
+- 使用CLIP模型支持文本到图像的检索
+- 支持不同大小的DINOv2模型（小型、基础型、大型、巨型）
+- 基于余弦相似度的图像检索
+- 使用FastAPI构建的Web界面
+- 使用向量图像数据库检索图片
 
-## Todo
-- [x] support embedding database
-- [ ] using rust language achieve
-- [ ] support different models to extract image features and text features
-- [ ] support rpc agreement
-## 🚀 Features
-- Image feature extraction using the DINOv2 model for image-to-image search
-- Text-to-image search powered by CLIP model
-- Support for different sizes of DINOv2 models (small, base, large, giant)
-- Image retrieval based on cosine similarity
-- Web interface built with FastAPI
-- Uses Chroma vector database to retrieval images
+## 用户界面
 
-## User Interface
+![DINOv2图像检索系统界面](./images/web.png)
 
-![DINOv2 Image Retrieval System Interface](./images/web.png)
+## 安装
 
-## Installation
-
-1. Clone the repository:
+1. 克隆仓库:
 
 ```bash
 git clone https://github.com/zheng0116/ImageRetrieval.git
 cd ImageRetrieval
 ```
 
-2. Install dependencies:
+2. 安装依赖项:
 
 ```bash
 sh run.sh install
 ```
 
-3. Download the Dinov2 weights:
+3. 下载DINOv2模型:
 ```bash
-https://pan.baidu.com/s/1fBVgg_o8PTFEu_2vtLY25Q
-Extraction code: f9ww
+https://pan.baidu.com/s/1fBVgg_o8PTFEu_2vtLY25Q 
+提取码: f9ww 
 ```
 
-4. Configure environment variables:
-Create a `.env` file in the root directory with the following content:
+4. 配置环境变量:
+在根目录创建 `.env` 文件，内容如下：
 ```bash
 SERVER_URL="0.0.0.0"
 SERVER_PORT=5999
@@ -52,42 +51,43 @@ MODEL_SIZE="small"
 DATABASE_FOLDER="./quary"
 ```
 
-## Usage
+## 使用方法
 
-1. Prepare your image database by placing images in the `quary` folder (or specify a custom folder in .env).
+1. 准备您的图像数据库，将图片放置在`quary`文件夹中（或在.env中指定自定义文件夹）。
 
-2. Run the application:
+2. 运行应用程序:
 
 ```bash
 sh run.sh start
 ```
 
-3. Open a web browser and navigate to `http://localhost:5999`.
+3. 打开浏览器访问 `http://localhost:5999`。
 
-4. Search Methods:
-   - Image-to-Image: Upload an image and click "Start Search"
-   - Text-to-Image: Enter text description in the search box and click "Text Search"
+4. 检索方式：
+   - 以图搜图：上传图片并点击"开始检索"
+   - 以文搜图：在文本框中输入描述并点击"文本搜索"
 
-## Configuration
+## 配置
 
-You can configure the following parameters in your .env file:
+您可以在.env文件中配置以下参数:
 
-- `SERVER_URL`: Server IP address (default: "0.0.0.0")
-- `SERVER_PORT`: Server port number (default: 5999)
-- `MODEL_PATH`: Path to the DINOv2 model (default: "./Dinov2_model/dinov2-small")
-- `MODEL_SIZE`: Size of the DINOv2 model (choices: small, base, large, giant; default: small)
-- `DATABASE_FOLDER`: Path to the image database folder (default: "./quary")
+- `SERVER_URL`: 服务器IP地址（默认："0.0.0.0"）
+- `SERVER_PORT`: 服务器端口号（默认：5999）
+- `MODEL_PATH`: DINOv2模型的路径（默认："./Dinov2_model/dinov2-small"）
+- `MODEL_SIZE`: DINOv2模型的大小（可选：small, base, large, giant；默认：small）
+- `DATABASE_FOLDER`: 图像数据库文件夹的路径（默认："./quary"）
 
-## Project Structure
+## 项目结构
 
-- `main.py`: Main application file with FastAPI server
-- `retrieval/services/model/Diniv2.py`: DINOv2 model loader
-- `retrieval/services/model/clip.py`: CLIP model loader
-- `retrieval/services/utils/image_process.py`: Image preprocessing 
-- `retrieval/services/retrieval.py`: Image retrieval logic
-- `static/index.html`: Web interface
-- `config` : Logging configuration, model initialization and routing configuration
-## Requirements
+- `main.py`: 主应用程序文件，包含FastAPI服务器
+- `retrieval/services/model/Diniv2.py`：DINOv2模型加载器
+- `retrieval/services/model/clip.py`: CLIP模型加载器
+- `retrieval/services/utils/image_process.py`: 图像预处理工具
+- `retrieval/services/retrieval.py`: 图像检索主逻辑
+- `static/index.html`: Web界面
+- `config` : 日志配置、模型初始化和路由配置
+
+## 配置需求
 
 - Python 3.7+
 - chroma
@@ -103,7 +103,7 @@ You can configure the following parameters in your .env file:
 
 [MIT License](LICENSE)
 
-## Acknowledgements
+## 致谢
 
 - [DINOv2](https://github.com/facebookresearch/dinov2) by Facebook Research
 - [CLIP](https://github.com/openai/CLIP) by OpenAI
