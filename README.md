@@ -1,4 +1,4 @@
-# 图像检索系统
+# ImageRetrieval 
  <strong>[中文]|
     [English](./README_en.md)</strong>
 ## 🌟 概述
