@@ -1,6 +1,5 @@
 # ImageRetrieval 
- <strong>[中文]|
-    [English](./README_en.md)</strong>
+ <strong>[English](./README_en.md) | 中文</strong>
 ## 🌟 概述
 本项目是一个基于DINOv2和CLIP模型的图像检索系统，使用Chroma向量数据库，支持文本到图像和图像到图像的检索。
 ## 将来计划
