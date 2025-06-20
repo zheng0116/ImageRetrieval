@@ -6,6 +6,7 @@ This project is an image retrieval system based on DINOv2 and CLIP models. It us
 
 ## Todo
 - [x] support embedding database
+- [ ] support importing image from oss(minio,s3)
 - [ ] using rust language achieve
 - [ ] support different models to extract image features and text features
 - [ ] support rpc agreement
