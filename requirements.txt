@@ -1,4 +1,4 @@
-chroma
+chromadb
 fastapi
 joblib
 loguru
