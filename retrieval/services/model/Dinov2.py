@@ -15,6 +15,7 @@ class Dinov2:
         else:
             model = AutoModel.from_pretrained(model_name)
             processor = AutoImageProcessor.from_pretrained(model_name)
+
         model = model.to(self.device)
         model.eval()
         return model, processor
