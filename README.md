@@ -90,8 +90,8 @@ sh run.sh start
 
 ## 配置需求
 
-- Python 3.7+
-- chroma
+- Python 3.10+
+- chromadb
 - FastAPI
 - Uvicorn
 - PyTorch

@@ -91,8 +91,8 @@ You can configure the following parameters in your .env file:
 - `config` : Logging configuration, model initialization and routing configuration
 ## Requirements
 
-- Python 3.7+
-- chroma
+- Python 3.10+
+- chromadb
 - FastAPI
 - Uvicorn
 - PyTorch

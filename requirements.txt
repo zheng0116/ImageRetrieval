@@ -1,15 +1,15 @@
-chromadb
-fastapi
-joblib
-loguru
-numpy
-pillow
-python-dotenv
-python-multipart
-tqdm
-torch 
-transformers 
-uvicorn
+chromadb==1.0.9
+fastapi==0.115.9
+joblib==1.4.2
+loguru==0.7.3
+numpy==2.2.3
+pillow==11.1.0
+python-dotenv==1.0.1
+python-multipart==0.0.20
+tqdm==4.67.1
+torch==2.6.0 
+transformers==4.49.0 
+uvicorn==0.34.0
 
 
 
