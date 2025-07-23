@@ -83,7 +83,7 @@ You can configure the following parameters in your .env file:
 ## Project Structure
 
 - `main.py`: Main application file with FastAPI server
-- `retrieval/services/model/Diniv2.py`: DINOv2 model loader
+- `retrieval/services/model/diniv2.py`: DINOv2 model loader
 - `retrieval/services/model/clip.py`: CLIP model loader
 - `retrieval/services/utils/image_process.py`: Image preprocessing 
 - `retrieval/services/retrieval.py`: Image retrieval logic
