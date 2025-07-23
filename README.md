@@ -36,19 +36,13 @@ cd ImageRetrieval
 sh run.sh install
 ```
 
-3. 下载DINOv2模型:
-```bash
-https://pan.baidu.com/s/1fBVgg_o8PTFEu_2vtLY25Q 
-提取码: f9ww 
-```
-
-4. 配置环境变量:
+3. 配置环境变量:
 在根目录创建 `.env` 文件，内容如下：
 ```bash
 SERVER_URL="0.0.0.0"
 SERVER_PORT=5999
-MODEL_PATH="./Dinov2_model/dinov2-small"
-MODEL_SIZE="small"
+MODEL_PATH="./Dinov2_model/dinov2-small" #如果你下载了权重可以自定义路径
+MODEL_SIZE="small" #权重规格设置
 DATABASE_FOLDER="./quary"
 ```
 

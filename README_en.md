@@ -38,20 +38,14 @@ cd ImageRetrieval
 sh run.sh install
 ```
 
-3. Download the Dinov2 weights:
-```bash
-https://pan.baidu.com/s/1fBVgg_o8PTFEu_2vtLY25Q
-Extraction code: f9ww
-```
-
-4. Configure environment variables:
+3. Configure environment variables:
 Create a `.env` file in the root directory with the following content:
 ```bash
 SERVER_URL="0.0.0.0"
 SERVER_PORT=5999
-MODEL_PATH="./Dinov2_model/dinov2-small"
-MODEL_SIZE="small"
-DATABASE_FOLDER="./quary"
+MODEL_PATH="./Dinov2_model/dinov2-small" #If you download the weights you can customize the path
+MODEL_SIZE="small" #weight specification
+DATABASE_FOLDER="./quary" 
 ```
 
 ## Usage
