@@ -55,6 +55,10 @@ DATABASE_FOLDER="./quary"
 ```bash
 sh run.sh start
 ```
+如果无法访问huggingface下载模型，可使用以下代理，或者使用`xget`代理。
+```bash
+ export HF_ENDPOINT=https://hf-mirror.com
+```
 
 3. 打开浏览器访问 `http://localhost:5999`。
 
