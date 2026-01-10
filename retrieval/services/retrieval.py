@@ -6,7 +6,10 @@ from pathlib import Path
 from tqdm import tqdm
 import chromadb
 from chromadb.config import Settings
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from ..config.logger import set_logger
+
+MAX_WORKERS = min(4, os.cpu_count() or 1)
 
 logger = set_logger("retrieval", "INFO")
 
@@ -76,6 +79,17 @@ class RetrievalProcessor:
         else:
             logger.info("CLIP features already exist in database")
 
+    def _extract_dinov2_feature(self, img_path):
+        try:
+            img = self.preprocessor.preprocess(img_path)
+            with torch.no_grad():
+                feature = torch.tensor(self.Dinov2(img)).to(self.device)
+                feature = feature / torch.norm(feature)
+            return feature.cpu().numpy().tolist(), str(img_path)
+        except Exception as e:
+            logger.error(f"Error processing image {img_path}: {str(e)}")
+            return None, str(img_path)
+
     def store_dinov2_features(self):
         if len(self.database_paths) == 0:
             raise ValueError(
@@ -90,33 +104,48 @@ class RetrievalProcessor:
         self.dinov2_collection = self.chroma_client.get_or_create_collection(
             name="dinov2_features", metadata={"hnsw:space": "cosine"}
         )
+
         embeddings = []
         documents = []
         ids = []
         metadatas = []
 
-        for idx, img_path in enumerate(
-            tqdm(self.database_paths, desc="Computing DINOv2 features")
-        ):
-            try:
-                img = self.preprocessor.preprocess(img_path)
-                with torch.no_grad():
-                    feature = torch.tensor(self.Dinov2(img)).to(self.device)
-                    feature = feature / torch.norm(feature)
-
-                embeddings.append(feature.cpu().numpy().tolist())
-                documents.append(str(img_path))
-                ids.append(f"dinov2_{idx}")
-                metadatas.append({"image_path": str(img_path), "type": "dinov2"})
-
-            except Exception as e:
-                logger.error(f"Error processing image {img_path}: {str(e)}")
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            futures = {
+                executor.submit(self._extract_dinov2_feature, img_path): idx
+                for idx, img_path in enumerate(self.database_paths)
+            }
+            for future in tqdm(
+                as_completed(futures),
+                total=len(self.database_paths),
+                desc="Computing DINOv2 features"
+            ):
+                idx = futures[future]
+                result = future.result()
+                if result[0] is not None:
+                    embeddings.append(result[0])
+                    documents.append(result[1])
+                    ids.append(f"dinov2_{idx}")
+                    metadatas.append({"image_path": result[1], "type": "dinov2"})
 
         if embeddings:
             self.dinov2_collection.add(
                 embeddings=embeddings, documents=documents, ids=ids, metadatas=metadatas
             )
             logger.info(f"Successfully stored {len(embeddings)} DINOv2 features")
+
+    def _extract_clip_feature(self, img_path):
+        try:
+            img = self.preprocessor.preprocess(img_path)
+            with torch.no_grad():
+                feature = torch.tensor(
+                    self.clip_loader.extract_image_features(img)
+                ).to(self.device)
+                feature = feature / torch.norm(feature)
+            return feature.cpu().numpy().tolist(), str(img_path)
+        except Exception as e:
+            logger.error(f"Error processing image {img_path}: {str(e)}")
+            return None, str(img_path)
 
     def store_clip_features(self):
         try:
@@ -135,24 +164,23 @@ class RetrievalProcessor:
         ids = []
         metadatas = []
 
-        for idx, img_path in enumerate(
-            tqdm(self.database_paths, desc="Computing CLIP features")
-        ):
-            try:
-                img = self.preprocessor.preprocess(img_path)
-                with torch.no_grad():
-                    feature = torch.tensor(
-                        self.clip_loader.extract_image_features(img)
-                    ).to(self.device)
-                    feature = feature / torch.norm(feature)
-
-                embeddings.append(feature.cpu().numpy().tolist())
-                documents.append(str(img_path))
-                ids.append(f"clip_{idx}")
-                metadatas.append({"image_path": str(img_path), "type": "clip"})
-
-            except Exception as e:
-                logger.error(f"Error processing image {img_path}: {str(e)}")
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            futures = {
+                executor.submit(self._extract_clip_feature, img_path): idx
+                for idx, img_path in enumerate(self.database_paths)
+            }
+            for future in tqdm(
+                as_completed(futures),
+                total=len(self.database_paths),
+                desc="Computing CLIP features"
+            ):
+                idx = futures[future]
+                result = future.result()
+                if result[0] is not None:
+                    embeddings.append(result[0])
+                    documents.append(result[1])
+                    ids.append(f"clip_{idx}")
+                    metadatas.append({"image_path": result[1], "type": "clip"})
 
         if embeddings:
             self.clip_collection.add(
@@ -206,10 +234,42 @@ class RetrievalProcessor:
 
         return retrieved_results
 
+    def _extract_dinov2_single(self, img_path, start_idx):
+        try:
+            img = self.preprocessor.preprocess(img_path)
+            with torch.no_grad():
+                feature = torch.tensor(self.Dinov2(img)).to(self.device)
+                feature = feature / torch.norm(feature)
+            return {
+                "embedding": feature.cpu().numpy().tolist(),
+                "path": str(img_path),
+                "idx": start_idx,
+            }
+        except Exception as e:
+            logger.error(f"Error processing image {img_path}: {str(e)}")
+            return None
+
+    def _extract_clip_single(self, img_path, start_idx):
+        try:
+            img = self.preprocessor.preprocess(img_path)
+            with torch.no_grad():
+                feature = torch.tensor(
+                    self.clip_loader.extract_image_features(img)
+                ).to(self.device)
+                feature = feature / torch.norm(feature)
+            return {
+                "embedding": feature.cpu().numpy().tolist(),
+                "path": str(img_path),
+                "idx": start_idx,
+            }
+        except Exception as e:
+            logger.error(f"Error processing image {img_path}: {str(e)}")
+            return None
+
     def add_images(self, new_image_paths):
         if not isinstance(new_image_paths, list):
             new_image_paths = [new_image_paths]
-        self.database_paths.extend(new_image_paths)
+
         dinov2_embeddings = []
         dinov2_documents = []
         dinov2_ids = []
@@ -222,32 +282,45 @@ class RetrievalProcessor:
 
         start_idx = self.dinov2_collection.count()
 
-        for idx, img_path in enumerate(tqdm(new_image_paths, desc="Adding new images")):
-            try:
-                img = self.preprocessor.preprocess(img_path)
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            futures = []
+            for idx, img_path in enumerate(new_image_paths):
+                futures.append(
+                    executor.submit(self._extract_dinov2_single, img_path, start_idx + idx)
+                )
+            for future in tqdm(
+                as_completed(futures),
+                total=len(new_image_paths),
+                desc="Extracting DINOv2 features"
+            ):
+                result = future.result()
+                if result is not None:
+                    dinov2_embeddings.append(result["embedding"])
+                    dinov2_documents.append(result["path"])
+                    dinov2_ids.append(f"dinov2_{result['idx']}")
+                    dinov2_metadatas.append({"image_path": result["path"], "type": "dinov2"})
 
-                with torch.no_grad():
-                    dinov2_feature = torch.tensor(self.Dinov2(img)).to(self.device)
-                    dinov2_feature = dinov2_feature / torch.norm(dinov2_feature)
+        if self.overall_model == "True":
+            clip_start_idx = self.clip_collection.count()
+            with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+                futures = []
+                for idx, img_path in enumerate(new_image_paths):
+                    futures.append(
+                        executor.submit(self._extract_clip_single, img_path, clip_start_idx + idx)
+                    )
+                for future in tqdm(
+                    as_completed(futures),
+                    total=len(new_image_paths),
+                    desc="Extracting CLIP features"
+                ):
+                    result = future.result()
+                    if result is not None:
+                        clip_embeddings.append(result["embedding"])
+                        clip_documents.append(result["path"])
+                        clip_ids.append(f"clip_{result['idx']}")
+                        clip_metadatas.append({"image_path": result["path"], "type": "clip"})
 
-                dinov2_embeddings.append(dinov2_feature.cpu().numpy().tolist())
-                dinov2_documents.append(str(img_path))
-                dinov2_ids.append(f"dinov2_{start_idx + idx}")
-                dinov2_metadatas.append({"image_path": str(img_path), "type": "dinov2"})
-
-                with torch.no_grad():
-                    clip_feature = torch.tensor(
-                        self.clip_loader.extract_image_features(img)
-                    ).to(self.device)
-                    clip_feature = clip_feature / torch.norm(clip_feature)
-
-                clip_embeddings.append(clip_feature.cpu().numpy().tolist())
-                clip_documents.append(str(img_path))
-                clip_ids.append(f"clip_{start_idx + idx}")
-                clip_metadatas.append({"image_path": str(img_path), "type": "clip"})
-
-            except Exception as e:
-                logger.error(f"Error processing new image {img_path}: {str(e)}")
+        self.database_paths.extend(new_image_paths)
 
         if dinov2_embeddings:
             self.dinov2_collection.add(
