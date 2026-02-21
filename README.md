@@ -1,19 +1,22 @@
 # ImageRetrieval 
  <strong>[English](./README_en.md) | 中文</strong>
 ## 🌟 概述
-本项目是一个基于DINOv2和CLIP模型的图像检索系统，使用Chroma向量数据库，支持文本到图像和图像到图像的检索。
+本项目是一个基于DINOv2和多模态模型（CLIP/SigLIP2/MobileCLIP2）的图像检索系统，使用Chroma向量数据库，支持文本到图像、图像到图像和图文混合检索。
 ## 将来计划
 - [x] 支持向量数据库
 - [ ] 支持从oss导入图片(minio,s3)
-- [ ] 支持图片存储后台管理以及多模态智能检索
+- [x] 支持多模态智能检索
 - [ ] 使用rust实现
 - [ ] 支持不同模型提取图像特征和文本特征
 - [ ] 支持rpc协议
 ## 🚀 特征
 - 使用DINOv2模型进行图像特征提取和以图搜图
-- 使用CLIP模型支持文本到图像的检索
+- 支持 CLIP / SigLIP2 / MobileCLIP2 文本到图像检索
 - 支持不同大小的DINOv2模型（小型、基础型、大型、巨型）
 - 基于余弦相似度的图像检索
+- 支持图文混合加权检索（multimodal retrieve）
+- 支持后台图片元数据管理（标题/描述/标签）
+- 支持自动标签建议（`MANAGEMENT_MODEL=multimodal_tags`）
 - 使用FastAPI构建的Web界面
 - 使用向量图像数据库检索图片
 
@@ -44,6 +47,8 @@ SERVER_PORT=5999
 MODEL_PATH="./Dinov2_model/dinov2-small" #如果你下载了权重可以自定义路径
 MODEL_SIZE="small" #权重规格设置
 DATABASE_FOLDER="./quary"
+EMBED_MODEL="siglip2_base" # 可选: dinov2,clip,siglip2_base,mobileclip2_s0
+MANAGEMENT_MODEL="none" # 可选: none,multimodal_tags
 ```
 
 ## 使用方法
@@ -75,6 +80,17 @@ sh run.sh start
 - `MODEL_PATH`: DINOv2模型的路径（默认："./Dinov2_model/dinov2-small"）
 - `MODEL_SIZE`: DINOv2模型的大小（可选：small, base, large, giant；默认：small）
 - `DATABASE_FOLDER`: 图像数据库文件夹的路径（默认："./quary"）
+- `EMBED_MODEL`: 检索模型选择（可选：`dinov2`、`clip`、`siglip2_base`、`mobileclip2_s0`；默认：`siglip2_base`）
+- `MANAGEMENT_MODEL`: 后台管理策略（可选：`none`、`multimodal_tags`；默认：`none`）
+
+## 后台管理与多模态接口
+
+- `POST /multimodal_retrieve`：图文混合检索（form-data，支持 `text_query`、`file`、`text_weight`、`image_weight`、`tags`）
+- `GET /admin/images`：分页查看图片元数据（支持 query/tags/page/page_size）
+- `GET /admin/images/{image_name}/metadata`：查看单图元数据
+- `PATCH /admin/images/{image_name}/metadata`：更新标题/描述/标签/extra
+- `POST /admin/images/{image_name}/suggest_tags`：生成标签建议
+- `POST /admin/sync`：同步磁盘图片、向量索引与元数据
 
 ## 项目结构
 

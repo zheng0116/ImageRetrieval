@@ -1,11 +1,13 @@
 import sys
+from typing import Any
+
 from loguru import logger
 
 
 def set_logger(
     logger_name: str = "main",
     level: str = "INFO",
-):
+) -> Any:
     logger.remove()
     logger.add(
         sys.stdout,

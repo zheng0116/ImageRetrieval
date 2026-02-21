@@ -8,4 +8,6 @@ pyvenv.cfg
 **/output/
 **/quary/
 **/tracing/
-
+.venv/
+.pycache_local/
+.DS_Store

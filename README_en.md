@@ -2,20 +2,23 @@
  <strong>[中文](./README.md) |
     English</strong>
 ## 🌟 Introduction
-This project is an image retrieval system based on DINOv2 and CLIP models. It uses Chroma vector database to support both text-to-image and image-to-image retrieval.
+This project is an image retrieval system based on DINOv2 and multimodal models (CLIP/SigLIP2/MobileCLIP2). It uses Chroma vector database and supports text-to-image, image-to-image, and hybrid multimodal retrieval.
 
 ## Todo
 - [x] support embedding database
 - [ ] support importing image from oss(minio,s3)
-- [ ] Supports image storage backend management and multi-modal intelligent search
+- [x] Supports multi-modal intelligent search
 - [ ] using rust language achieve
 - [ ] support different models to extract image features and text features
 - [ ] support rpc agreement
 ## 🚀 Features
 - Image feature extraction using the DINOv2 model for image-to-image search
-- Text-to-image search powered by CLIP model
+- Text-to-image search powered by CLIP / SigLIP2 / MobileCLIP2
 - Support for different sizes of DINOv2 models (small, base, large, giant)
 - Image retrieval based on cosine similarity
+- Hybrid weighted retrieval for image + text queries
+- Backend image metadata management (title/description/tags)
+- Auto tag suggestion (`MANAGEMENT_MODEL=multimodal_tags`)
 - Web interface built with FastAPI
 - Uses Chroma vector database to retrieval images
 
@@ -46,6 +49,8 @@ SERVER_PORT=5999
 MODEL_PATH="./Dinov2_model/dinov2-small" #If you download the weights you can customize the path
 MODEL_SIZE="small" #weight specification
 DATABASE_FOLDER="./quary" 
+EMBED_MODEL="siglip2_base" # options: dinov2,clip,siglip2_base,mobileclip2_s0
+MANAGEMENT_MODEL="none" # options: none,multimodal_tags
 ```
 
 ## Usage
@@ -73,6 +78,17 @@ You can configure the following parameters in your .env file:
 - `MODEL_PATH`: Path to the DINOv2 model (default: "./Dinov2_model/dinov2-small")
 - `MODEL_SIZE`: Size of the DINOv2 model (choices: small, base, large, giant; default: small)
 - `DATABASE_FOLDER`: Path to the image database folder (default: "./quary")
+- `EMBED_MODEL`: Retrieval model selector (`dinov2`, `clip`, `siglip2_base`, `mobileclip2_s0`)
+- `MANAGEMENT_MODEL`: Backend management strategy (`none`, `multimodal_tags`; default: `none`)
+
+## Admin & Multimodal APIs
+
+- `POST /multimodal_retrieve`: hybrid retrieval (form-data: `text_query`, `file`, `text_weight`, `image_weight`, `tags`)
+- `GET /admin/images`: list image metadata with pagination
+- `GET /admin/images/{image_name}/metadata`: get one image metadata
+- `PATCH /admin/images/{image_name}/metadata`: update title/description/tags/extra
+- `POST /admin/images/{image_name}/suggest_tags`: suggest tags with multimodal embedding
+- `POST /admin/sync`: sync disk images, vector indexes, and metadata
 
 ## Project Structure
 
