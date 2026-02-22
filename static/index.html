@@ -4,42 +4,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Retrieval System</title>
+    <title>图像检索系统</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Unbounded:wght@500;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="/static/css/web.css">
 </head>
 
 <body>
-    <div class="container">
-        <header class="header">
+    <div class="ambient ambient-one" aria-hidden="true"></div>
+    <div class="ambient ambient-two" aria-hidden="true"></div>
+    <div class="noise-overlay" aria-hidden="true"></div>
+    <main class="app-shell">
+        <header class="hero" aria-label="Page Introduction">
             <h1>Image Retrieval System</h1>
-            <p>Image and Text Retrieval System Based on DINOv2 and CLIP</p>
+            <p class="hero-subtitle">一句描述，或一张图片，快速找到相似素材</p>
         </header>
 
-        <div class="search-card">
+        <section class="search-card" aria-label="Search Controls">
             <form class="search-form" id="searchForm">
                 <div class="search-input-wrapper">
                     <input type="text" id="textSearch" class="search-input"
-                        placeholder="Enter keywords to search, or click the upload button to search by image...">
+                        placeholder="输入检索描述，或上传一张参考图片...">
                     <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                 </div>
-                <label class="upload-label" for="imageUpload">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <button type="submit" class="search-button">开始检索</button>
+                <label class="upload-label" for="imageUpload" title="Upload image">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path
                             d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
+                    <span>上传图片</span>
                 </label>
                 <input type="file" id="imageUpload" accept="image/*">
             </form>
+            <div class="tips-row" aria-label="Example Queries">
+                <button type="button" class="tip-chip">city skyline at dusk</button>
+                <button type="button" class="tip-chip">black running shoes</button>
+                <button type="button" class="tip-chip">orange tabby cat close-up</button>
+            </div>
+            <p id="fileName" class="file-name">未选择图片</p>
             <div class="progress">
                 <div class="progress-bar"></div>
             </div>
-        </div>
+            <p id="statusMessage" class="status-message"></p>
+        </section>
 
-        <p id="statusMessage"></p>
-        <div class="results-grid" id="results"></div>
-    </div>
+        <section class="results-section" aria-label="Retrieval Results">
+            <div class="results-header">
+                <h2>检索结果</h2>
+                <p id="resultsMeta">等待查询...</p>
+            </div>
+            <div class="results-grid" id="results"></div>
+        </section>
+    </main>
 
     <script src="/static/js/web.js"></script>
 </body>
