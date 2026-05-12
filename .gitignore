@@ -11,3 +11,4 @@ pyvenv.cfg
 .venv/
 .pycache_local/
 .DS_Store
+CLAUDE.md
